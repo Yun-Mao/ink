@@ -190,7 +190,7 @@ func Build() {
 	for tagName, articles := range tagMap {
 		sort.Sort(articles)
 		wg.Add(1)
-		go RenderArticleList(filepath.Join("tag", tagName), articles, tagName)
+		go RenderTagArticleList(filepath.Join("tag", tagName), articles, tagName)
 	}
 	// Generate archive page
 	archives := make(Collections, 0)
