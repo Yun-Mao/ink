@@ -7,9 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/russross/blackfriday"
 	"gopkg.in/yaml.v2"
-
-	"github.com/InkProject/blackfriday"
 )
 
 type SiteConfig struct {
@@ -63,8 +62,6 @@ type ArticleConfig struct {
 	Top        bool
 	Type       string
 	Hide       bool
-	Image      string
-	Subtitle   string
 	Config     interface{}
 }
 
@@ -83,8 +80,6 @@ type Article struct {
 	Content  template.HTML
 	Link     string
 	Config   interface{}
-	Image    string
-	Subtitle string
 }
 
 type ThemeConfig struct {
@@ -128,7 +123,7 @@ func ParseGlobalConfig(configPath string, develop bool) *GlobalConfig {
 		config.Site.Url = strings.TrimSuffix(config.Site.Url, "/")
 	}
 	if config.Build.Output == "" {
-		config.Build.Output = "public"
+		config.Build.Output = "blog"
 	}
 	// Parse Theme Config
 	themeConfig := ParseThemeConfig(filepath.Join(rootPath, config.Site.Theme, "config.yml"))
@@ -166,13 +161,13 @@ func ParseArticleConfig(markdownPath string) (config *ArticleConfig, content str
 	// Split config and markdown
 	contentStr := string(data)
 	contentStr = ReplaceRootFlag(contentStr)
-	markdownStr := strings.SplitN(contentStr, CONFIG_SPLIT, 2)
+	markdownStr := strings.SplitN(contentStr, CONFIG_SPLIT, 3)
 	contentLen := len(markdownStr)
 	if contentLen > 0 {
-		configStr = markdownStr[0]
+		configStr = markdownStr[1]
 	}
 	if contentLen > 1 {
-		content = markdownStr[1]
+		content = markdownStr[2]
 	}
 	// Parse config content
 	if err := yaml.Unmarshal([]byte(configStr), &config); err != nil {
@@ -225,8 +220,6 @@ func ParseArticle(markdownPath string) *Article {
 	article.Topic = config.Topic
 	article.Draft = config.Draft
 	article.Top = config.Top
-	article.Image = config.Image
-	article.Subtitle = config.Subtitle
 	if author, ok := globalConfig.Authors[config.Author]; ok {
 		author.Id = config.Author
 		author.Avatar = ReplaceRootFlag(author.Avatar)
@@ -255,6 +248,9 @@ func ParseArticle(markdownPath string) *Article {
 	}
 	// Generate page name
 	fileName := strings.TrimSuffix(strings.ToLower(filepath.Base(markdownPath)), ".md")
+	// sourcePath = filepath.Join(rootPath, "source")
+	// mkrelPath, _ := filepath.Rel(sourcePath, markdownPath)
+	// fileName := strings.TrimSuffix(strings.ToLower(mkrelPath), ".md")
 	link := fileName + ".html"
 	// Genetate custom link
 	if article.Type == "post" {

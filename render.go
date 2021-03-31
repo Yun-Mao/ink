@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/douyacun/gositemap"
 	"github.com/gorilla/feeds"
 )
 
@@ -82,6 +83,41 @@ func RenderArticles(tpl template.Template, articles Collections) {
 }
 
 // Generate rss page
+func GenerateSitemap(articles Collections) {
+	defer wg.Done()
+	var sitemapArticles Collections
+	sitemapArticles = articles
+	st := gositemap.NewSiteMap()
+	st.SetPretty(true)
+
+	// feed.Items = make([]*feeds.Item, 0)
+
+	for _, item := range sitemapArticles {
+		article := item.(Article)
+		url := gositemap.NewUrl()
+		url.SetLoc(globalConfig.Site.Url + "/" + article.Link)
+		if article.MTime.IsZero() {
+			url.SetLastmod(article.Time)
+		} else {
+			url.SetLastmod(article.MTime)
+		}
+
+		// url.SetChangefreq(Daily)
+		url.SetPriority(1)
+		st.AppendUrl(url)
+	}
+	if bt, err := st.ToXml(); err == nil {
+		err := ioutil.WriteFile(filepath.Join(publicPath, "sitemap.xml"), []byte(bt), 0644)
+		if err != nil {
+			Fatal(err.Error())
+		}
+	} else {
+		Fatal(err.Error())
+	}
+
+}
+
+// Generate rss page
 func GenerateRSS(articles Collections) {
 	defer wg.Done()
 	var feedArticles Collections
@@ -141,6 +177,60 @@ func RenderArticleList(rootPath string, articles Collections, tagName string) {
 	for i := 0; i < page; i++ {
 		var prev = filepath.Join(rootPath, "page"+strconv.Itoa(i)+".html")
 		var next = filepath.Join(rootPath, "page"+strconv.Itoa(i+2)+".html")
+		outPath := filepath.Join(pagePath, "page1.html")
+		if i != 0 {
+			fileName := "page" + strconv.Itoa(i+1) + ".html"
+			outPath = filepath.Join(pagePath, fileName)
+		} else {
+			prev = ""
+		}
+		if i == 1 {
+			prev = filepath.Join(rootPath, "page1.html")
+		}
+		first := i * limit
+		count := first + limit
+		if i == page-1 {
+			if rest != 0 {
+				count = first + rest
+			}
+			next = ""
+		}
+		var data = map[string]interface{}{
+			"Articles": articles[first:count],
+			"Site":     globalConfig.Site,
+			"Develop":  globalConfig.Develop,
+			"Page":     i + 1,
+			"Total":    page,
+			"Prev":     prev,
+			"Next":     next,
+			"TagName":  tagName,
+			"TagCount": len(articles),
+		}
+		wg.Add(1)
+		go RenderPage(pageTpl, data, outPath)
+	}
+}
+
+// Generate article list page
+func RenderTagArticleList(rootPath string, articles Collections, tagName string) {
+	defer wg.Done()
+	// Create path
+	pagePath := filepath.Join(publicPath, rootPath)
+	os.MkdirAll(pagePath, 0777)
+	// Split page
+	limit := globalConfig.Site.Limit
+	total := len(articles)
+	page := total / limit
+	rest := total % limit
+	if rest != 0 {
+		page++
+	}
+	if total < limit {
+		page = 1
+	}
+	for i := 0; i < page; i++ {
+		var prev = rootPath + "/page" + strconv.Itoa(i) + ".html"
+		var next = rootPath + "/page" + strconv.Itoa(i+2) + ".html"
 		outPath := filepath.Join(pagePath, "index.html")
 		if i != 0 {
 			fileName := "page" + strconv.Itoa(i+1) + ".html"

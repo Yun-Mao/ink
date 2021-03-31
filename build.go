@@ -15,7 +15,7 @@ import (
 )
 
 // Parse config
-var articleTpl, pageTpl, archiveTpl, tagTpl template.Template
+var articleTpl, pageTpl, archiveTpl, tagTpl, indexTpl template.Template
 var themePath, publicPath, sourcePath string
 
 // For concurrency
@@ -104,8 +104,9 @@ func Build() {
 	pageTpl = CompileTpl(filepath.Join(themePath, "page.html"), partialTpl, "page")
 	archiveTpl = CompileTpl(filepath.Join(themePath, "archive.html"), partialTpl, "archive")
 	tagTpl = CompileTpl(filepath.Join(themePath, "tag.html"), partialTpl, "tag")
+	indexTpl = CompileTpl(filepath.Join(themePath, "index.html"), partialTpl, "index")
 	// Clean public folder
-	cleanPatterns := []string{"post", "tag", "images", "js", "css", "*.html", "favicon.ico", "robots.txt"}
+	cleanPatterns := []string{"post", "tag", "images", "js", "css", "*.html", "favicon.ico", "robots.txt", "blog*/*.html"}
 	for _, pattern := range cleanPatterns {
 		files, _ := filepath.Glob(filepath.Join(publicPath, pattern))
 		for _, path := range files {
@@ -169,6 +170,9 @@ func Build() {
 	sort.Sort(visibleArticles)
 	// Generate RSS page
 	wg.Add(1)
+	go GenerateSitemap(visibleArticles)
+	// Generate Sitemap page
+	wg.Add(1)
 	go GenerateRSS(visibleArticles)
 	// Generate article list JSON
 	wg.Add(1)
@@ -207,6 +211,11 @@ func Build() {
 		"Site":    globalConfig.Site,
 		"I18n":    globalConfig.I18n,
 	}, filepath.Join(publicPath, "archive.html"))
+	wg.Add(1)
+	go RenderPage(indexTpl, map[string]interface{}{
+		"Site": globalConfig.Site,
+		"I18n": globalConfig.I18n,
+	}, filepath.Join(publicPath, "index.html"))
 	// Generate tag page
 	tags := make(Collections, 0)
 	for tagName, tagArticles := range tagMap {
