@@ -175,8 +175,8 @@ func Build() {
 	wg.Add(1)
 	go GenerateRSS(visibleArticles)
 	// Generate article list JSON
-	wg.Add(1)
-	go GenerateJSON(visibleArticles)
+	// wg.Add(1)
+	// go GenerateJSON(visibleArticles)
 	// Render articles
 	wg.Add(1)
 	go RenderArticles(articleTpl, articles)
