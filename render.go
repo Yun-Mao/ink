@@ -239,7 +239,7 @@ func RenderTagArticleList(rootPath string, articles Collections, tagName string)
 			prev = ""
 		}
 		if i == 1 {
-			prev = filepath.Join(rootPath, "index.html")
+			prev = rootPath + "/index.html"
 		}
 		first := i * limit
 		count := first + limit
