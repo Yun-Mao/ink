@@ -263,6 +263,7 @@ func Build() {
 	}
 	// Copy static files
 	Copy()
+	CopyImage()
 	wg.Wait()
 	endTime := time.Now()
 	usedTime := endTime.Sub(startTime)
@@ -291,6 +292,32 @@ func Copy() {
 			}
 		} else {
 			Fatal(err.Error())
+		}
+	}
+}
+
+func CopyImage() {
+	// srcList := globalConfig.Build.Copy
+	files, _ := filepath.Glob("./source/*")
+	// fmt.Println(files)
+	for _, source := range files {
+		// fmt.Println(source)
+		if matches, err := filepath.Glob(filepath.Join(source, "images")); err == nil {
+			fmt.Println(matches)
+			for _, srcPath := range matches {
+				Log("Copying " + srcPath)
+				file, err := os.Stat(srcPath)
+				if err != nil {
+					Fatal("Not exist: " + srcPath)
+				}
+				desPath := filepath.Join(publicPath, "/images")
+				wg.Add(1)
+				if file.IsDir() {
+					go CopyDir(srcPath, desPath)
+				} else {
+					go CopyFile(srcPath, desPath)
+				}
+			}
 		}
 	}
 }
